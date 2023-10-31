@@ -2,7 +2,7 @@ name: lootify
 on:
   workflow_dispatch:
   schedule:
-    - chron: 0 7 5 * *
+    - cron: 0 7 5 * *
     
 jobs:
   lootify:
