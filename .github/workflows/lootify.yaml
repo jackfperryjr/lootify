@@ -27,12 +27,12 @@ jobs:
 
       - name: Lootify REFIA
         run: |
-          export user=gainsborough pass=${{ secrets.PASSWORD }}
+          export user=refia pass=${{ secrets.PASSWORD }}
           python3 lootify.py
 
       - name: Lootify TRAMEL
         run: |
-          export user=gainsborough pass=${{ secrets.PASSWORD }}
+          export user=tramel pass=${{ secrets.PASSWORD }}
           python3 lootify.py
 
 
