@@ -14,10 +14,10 @@ jobs:
       - name: pip install
         run: pip install -r requirements.txt
 
-      - name: gainsborough
+      - name: lootify gainsborough
         run: |
           export user=${{ secrets.GAINSBOROUGH }} pass=${{ secrets.PASSWORD }}
-          python3 lootcoins.py
+          python3 lootify.py
 
 
 
