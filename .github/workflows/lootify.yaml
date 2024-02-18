@@ -2,7 +2,7 @@ name: lootify
 on:
   workflow_dispatch:
   schedule:
-    - cron: 0 8 1 * *
+    - cron: 0 8 1,15 * *
     
 jobs:
   lootify:
@@ -33,6 +33,11 @@ jobs:
       - name: Lootify TRAMEL
         run: |
           export user=tramel pass=${{ secrets.PASSWORD }}
+          python3 lootify.py
+
+      - name: Lootify MRMONEYMAKER
+        run: |
+          export user=mrmoneymaker pass=${{ secrets.PASSWORD }}
           python3 lootify.py
 
 
