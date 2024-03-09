@@ -25,9 +25,9 @@ jobs:
           export user=gainsborough pass=${{ secrets.PASSWORD }}
           python3 lootify.py
 
-      - name: Lootify MRMONEYMAKER
+      - name: Lootify ZANARKAND
         run: |
-          export user=mrmoneymaker pass=${{ secrets.PASSWORD }}
+          export user=zanarkand pass=${{ secrets.PASSWORD }}
           python3 lootify.py
 
 
