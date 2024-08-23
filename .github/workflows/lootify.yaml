@@ -20,10 +20,10 @@ jobs:
       - name: Install pip
         run: pip install -r requirements.txt
 
-      - name: Lootify GAINSBOROUGH
-        run: |
-          export user=gainsborough pass=${{ secrets.PASSWORD }}
-          python3 lootify.py
+      # - name: Lootify GAINSBOROUGH
+      #   run: |
+      #     export user=gainsborough pass=${{ secrets.PASSWORD }}
+      #     python3 lootify.py
 
       - name: Lootify ZANARKAND
         run: |
