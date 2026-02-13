@@ -2,36 +2,24 @@ name: lootify
 on:
   workflow_dispatch:
   schedule:
-    - cron: 0 8 1,15 * *
-    
+    # CRON Generator Link: https://crontab.guru
+    - cron: "33 3 * * *"
+
 jobs:
-  lootify:
-    container:
-      image: python@sha256:cd311c6a0164f34a7edbf364e05258b07d66d3f7bc155139dcb9bef88a186ded
-    services:
-      hub:
-        image: selenium/standalone-chrome:latest
-
+  login-account:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - account: ${{ secrets.ACCOUNT }}
+            password: ${{ secrets.PASSWORD }}
+            game: ${{ secrets.GAME_CODE }}
+      fail-fast: false
+    name: login ${{ matrix.account }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        
-      - name: Install pip
-        run: pip install -r requirements.txt
-
-      # - name: Lootify GAINSBOROUGH
-      #   run: |
-      #     export user=gainsborough pass=${{ secrets.PASSWORD }}
-      #     python3 lootify.py
-
-      - name: Lootify ZANARKAND
-        run: |
-          export user=zanarkand pass=${{ secrets.PASSWORD }}
-          python3 lootify.py
-
-
-
-
-
-
+      - uses: elanthia-online/simu-rewards@v1
+        with:
+          account: ${{ secrets[matrix.account] }}
+          password: ${{ secrets[matrix.password] }}
+          game: ${{ secrets[matrix.game] }}
+          bypass_login: false
