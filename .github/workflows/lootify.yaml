@@ -8,18 +8,11 @@ on:
 jobs:
   login-account:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - account: ${{ secrets.ACCOUNT }}
-            password: ${{ secrets.PASSWORD }}
-            game: ${{ secrets.GAME_CODE }}
-      fail-fast: false
-    name: login ${{ matrix.account }}
+    name: login and lootify
     steps:
       - uses: elanthia-online/simu-rewards@v1
         with:
-          account: ${{ secrets[matrix.account] }}
-          password: ${{ secrets[matrix.password] }}
-          game: ${{ secrets[matrix.game] }}
+          account: ${{ secrets.ACCOUNT }}
+          password: ${{ secrets.PASSWORD }}
+          game: ${{ secrets.GAME_CODE }}
           bypass_login: false
