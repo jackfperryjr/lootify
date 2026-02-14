@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   schedule:
     # CRON Generator Link: https://crontab.guru
-    - cron: "33 3 * * *"
+    - cron: "33 9 * * *"
 
 jobs:
   login-account:
