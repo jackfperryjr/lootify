@@ -6,13 +6,35 @@ on:
     - cron: "33 9 * * *"
 
 jobs:
-  login-account:
+  account1:
     runs-on: ubuntu-latest
     name: login and lootify
     steps:
       - uses: elanthia-online/simu-rewards@v1
         with:
           account: ${{ secrets.ACCOUNT }}
+          password: ${{ secrets.PASSWORD }}
+          game: ${{ secrets.GAME_CODE }}
+          bypass_login: false
+
+  account2:
+    runs-on: ubuntu-latest
+    name: login and lootify
+    steps:
+      - uses: elanthia-online/simu-rewards@v1
+        with:
+          account: ${{ secrets.ACCOUNT2 }}
+          password: ${{ secrets.PASSWORD }}
+          game: ${{ secrets.GAME_CODE }}
+          bypass_login: false
+
+  account3:
+    runs-on: ubuntu-latest
+    name: login and lootify
+    steps:
+      - uses: elanthia-online/simu-rewards@v1
+        with:
+          account: ${{ secrets.ACCOUNT3 }}
           password: ${{ secrets.PASSWORD }}
           game: ${{ secrets.GAME_CODE }}
           bypass_login: false
