@@ -16,14 +16,3 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           game: ${{ secrets.GAME_CODE }}
           bypass_login: false
-
-  account4:
-    runs-on: ubuntu-latest
-    name: login and lootify account3
-    steps:
-      - uses: elanthia-online/simu-rewards@v1
-        with:
-          account: ${{ secrets.ACCOUNT4 }}
-          password: ${{ secrets.PASSWORD }}
-          game: ${{ secrets.GAME_CODE }}
-          bypass_login: false
