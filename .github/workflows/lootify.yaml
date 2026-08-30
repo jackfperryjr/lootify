@@ -2,15 +2,57 @@ name: lootify
 on:
   workflow_dispatch:
   schedule:
+    # Target: 06:00 America/Chicago, every day.
+    # GitHub cron is UTC-only, so both DST offsets are listed and the guard step
+    # below drops whichever one isn't currently in effect. Each fires 20 min
+    # early to absorb GitHub's scheduler queue delay; the wait step then pins
+    # the actual start to 06:00 Central.
     # CRON Generator Link: https://crontab.guru
-    - cron: "33 9 * * *"
+    - cron: "40 10 * * *"
+    - cron: "40 11 * * *"
 
 jobs:
   account:
     runs-on: ubuntu-latest
     name: login and lootify
     steps:
+      - id: guard
+        name: drop the cron for the wrong DST offset
+        env:
+          FIRED: ${{ github.event.schedule }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "schedule" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # -0500 = CDT, -0600 = CST
+          if [ "$(TZ=America/Chicago date +%z)" = "-0500" ]; then
+            expected="40 10 * * *"
+          else
+            expected="40 11 * * *"
+          fi
+          if [ "$FIRED" = "$expected" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "cron '$FIRED' is the wrong offset right now; skipping."
+          fi
+
+      - name: wait until 06:00 America/Chicago
+        if: steps.guard.outputs.proceed == 'true' && github.event_name == 'schedule'
+        run: |
+          target=$(TZ=America/Chicago date -d 'today 06:00' +%s)
+          now=$(date +%s)
+          if [ "$target" -gt "$now" ]; then
+            echo "sleeping $((target - now))s"
+            sleep $((target - now))
+          else
+            echo "already past 06:00 Central; starting now"
+          fi
+
       - uses: elanthia-online/simu-rewards@v1
+        if: steps.guard.outputs.proceed == 'true'
         with:
           account: ${{ secrets.ACCOUNT }}
           password: ${{ secrets.PASSWORD }}
