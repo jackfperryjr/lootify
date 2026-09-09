@@ -1,58 +1,73 @@
 name: lootify
+
+# Target: 03:00 America/Chicago, every day.
+#
+# This used to be driven by `schedule:` alone, with two crons (one per DST offset), a
+# guard step that dropped the wrong one, and a sleep that pinned the start to 06:00.
+# That absorbed an EARLY trigger but could do nothing about a late one — and late is
+# GitHub's normal failure mode: scheduled runs go on a shared best-effort queue that
+# gets deprioritised under load, so a 06:00 job routinely started at 10:00.
+#
+# The trigger now comes from magiserver (Railway, always-on, accurate clock), which
+# POSTs a workflow_dispatch at 03:00 Central. Dispatches aren't queued the way
+# schedules are — they start within seconds. See magiserver/src/lootify-cron.ts.
+#
+# The cron below is now only a BACKSTOP for magiserver being down across 03:00. It
+# deliberately runs late and does nothing if the day's run already succeeded, so a
+# normal morning costs one API call and no job.
 on:
   workflow_dispatch:
   schedule:
-    # Target: 06:00 America/Chicago, every day.
-    # GitHub cron is UTC-only, so both DST offsets are listed and the guard step
-    # below drops whichever one isn't currently in effect. Each fires 20 min
-    # early to absorb GitHub's scheduler queue delay; the wait step then pins
-    # the actual start to 06:00 Central.
-    # CRON Generator Link: https://crontab.guru
-    - cron: "40 10 * * *"
-    - cron: "40 11 * * *"
+    # 11:00 UTC — 05:00 CST / 06:00 CDT, i.e. a couple of hours after the real
+    # trigger. Precision is irrelevant for a backstop, so this is a single cron and
+    # the DST dance is gone with it.
+    - cron: "0 11 * * *"
+
+permissions:
+  contents: read
+  actions: read      # the backstop reads this workflow's own run history
 
 jobs:
   account:
     runs-on: ubuntu-latest
     name: login and lootify
     steps:
-      - id: guard
-        name: drop the cron for the wrong DST offset
+      - id: backstop
+        name: skip if the day's run already succeeded
+        if: github.event_name == 'schedule'
         env:
-          FIRED: ${{ github.event.schedule }}
-          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "$EVENT" != "schedule" ]; then
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          # Local midnight, expressed in UTC, because run_started_at is UTC and the
+          # day that matters is the Central one.
+          midnight=$(TZ=America/Chicago date -d 'today 00:00' -u +%Y-%m-%dT%H:%M:%SZ)
+          # Every uncertain path below falls open — i.e. RUNS the job. A backstop that
+          # skips when it can't tell is worse than one that occasionally re-claims
+          # rewards that are already claimed, which the game treats as a no-op.
+          if [ -z "$midnight" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "couldn't resolve local midnight; running as backstop."
             exit 0
           fi
-          # -0500 = CDT, -0600 = CST
-          if [ "$(TZ=America/Chicago date +%z)" = "-0500" ]; then
-            expected="40 10 * * *"
+          # `|| echo ""` because run: steps are `bash -e`: an API blip would otherwise
+          # fail this step and take the whole job with it, which is the one outcome a
+          # backstop must never have.
+          hits=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/lootify.yaml/runs?per_page=30" \
+            --jq "[.workflow_runs[]
+                   | select(.conclusion == \"success\")
+                   | select(.run_started_at > \"$midnight\")] | length" || echo "")
+          # A dispatched run that FAILED leaves no success, so the backstop still
+          # retries it — which is the other half of what this is for.
+          if [ "${hits:-0}" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$hits successful run(s) since $midnight — magiserver already triggered today."
           else
-            expected="40 11 * * *"
-          fi
-          if [ "$FIRED" = "$expected" ]; then
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "cron '$FIRED' is the wrong offset right now; skipping."
-          fi
-
-      - name: wait until 06:00 America/Chicago
-        if: steps.guard.outputs.proceed == 'true' && github.event_name == 'schedule'
-        run: |
-          target=$(TZ=America/Chicago date -d 'today 06:00' +%s)
-          now=$(date +%s)
-          if [ "$target" -gt "$now" ]; then
-            echo "sleeping $((target - now))s"
-            sleep $((target - now))
-          else
-            echo "already past 06:00 Central; starting now"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "no successful run since $midnight — magiserver missed it; running as backstop."
           fi
 
       - uses: elanthia-online/simu-rewards@v1
-        if: steps.guard.outputs.proceed == 'true'
+        if: steps.backstop.outputs.skip != 'true'
         with:
           account: ${{ secrets.ACCOUNT }}
           password: ${{ secrets.PASSWORD }}
